@@ -13,3 +13,9 @@
 .profileDetails{
     @apply font-rubik text-2xl lg:text-3xl font-[400] mb-5;
 }
+.contestHeading{
+    @apply text-center text-[1.2rem] md:text-[1.4rem];
+}
+.contestDetails{
+    @apply text-center text-[1rem] md:text-[1.2rem] self-center;
+}

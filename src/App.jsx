@@ -1,4 +1,5 @@
 import Profile from './Profile.jsx';
+import Contests from './Contests.jsx';
 
 function App() {
   return (
@@ -12,7 +13,7 @@ function App() {
             <h1 className="font-doto fontSize text-[#ffffff] hover:text-[#87CEEB] cursor-pointer">Contests</h1>
           </div>
         </div>
-        <Profile/>
+        <Contests/>
       </div>
     </>
   );

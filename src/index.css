@@ -7,6 +7,9 @@
     --font-rubik: Rubik, "sans-serif";
 }
 
+table, th, td {
+    border:2px solid black;
+}
 .removeBtn{
     padding:4px 17px 4px 17px;
     margin-left: 5rem;

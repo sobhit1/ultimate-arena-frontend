@@ -63,6 +63,13 @@ const getContestStatus = (startDateTime, length) => {
     return 'ongoing';
 };
 
+const parseDateTime = (dateStr, timeStr) => {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    const [hours, minutes] = timeStr.split(':').map(Number);
+
+    return new Date(year, month - 1, day, hours, minutes);
+};
+
 const ActionButton = ({ action, onClick, isCreator, status }) => {
     const theme = useTheme();
 
@@ -98,7 +105,7 @@ const ActionButton = ({ action, onClick, isCreator, status }) => {
         }
     };
 
-    const config = isCreator && status != 'completed' ? buttonConfig.edit : buttonConfig[action];
+    const config = isCreator && status !== 'completed' ? buttonConfig.edit : buttonConfig[action];
 
     return (
         <Button
@@ -122,21 +129,21 @@ const ActionButton = ({ action, onClick, isCreator, status }) => {
     );
 };
 
+const to12HourFormat = (time24h) => {
+    if (!time24h) return '';
+    
+    const [hours, minutes] = time24h.split(':');
+    const hour = parseInt(hours, 10);
+    
+    if (isNaN(hour)) return '';
+    
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    
+    return `${hour12}:${minutes} ${period}`;
+};
+
 function ContestTable({ columns, data, isMobile, currentUser }) {
-    const parseDateTime = (dateStr, timeStr) => {
-        const [dateParts, timeParts] = [dateStr.split('/'), timeStr.split(' ')];
-        const [month, day, year] = dateParts;
-        const [time, modifier] = timeParts[0].includes(':') ?
-            [timeParts[0], timeParts[1]] : [timeParts[0], ''];
-        const [hours, minutes] = time.split(':').map(Number);
-
-        let hours24 = hours;
-        if (modifier === 'PM' && hours < 12) hours24 += 12;
-        if (modifier === 'AM' && hours === 12) hours24 = 0;
-
-        return new Date(year, month - 1, day, hours24, minutes);
-    };
-
     return (
         isMobile ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -144,6 +151,9 @@ function ContestTable({ columns, data, isMobile, currentUser }) {
                     const startTime = parseDateTime(row.date, row.time);
                     const status = getContestStatus(startTime, row.length);
                     const isCreator = row.creator === currentUser;
+                    const action = status === 'completed' ? 'standings' :
+                        isCreator ? 'edit' :
+                            status === 'ongoing' ? 'enter' : 'register';
 
                     return (
                         <ContestCard key={row.name} elevation={2}>
@@ -171,8 +181,9 @@ function ContestTable({ columns, data, isMobile, currentUser }) {
 
                                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                                     <ActionButton
-                                        action={status === 'completed' ? 'standings' : row.action}
+                                        action={action}
                                         isCreator={isCreator}
+                                        status={status}
                                     />
                                 </Stack>
                             </Stack>
@@ -200,6 +211,9 @@ function ContestTable({ columns, data, isMobile, currentUser }) {
                             const startTime = parseDateTime(row.date, row.time);
                             const status = getContestStatus(startTime, row.length);
                             const isCreator = row.creator === currentUser;
+                            const action = status === 'completed' ? 'standings' :
+                                status === 'ongoing' ? 'enter' :
+                                    isCreator ? 'edit' : 'register';
 
                             return (
                                 <TableRow hover key={row.name}>
@@ -218,7 +232,7 @@ function ContestTable({ columns, data, isMobile, currentUser }) {
                                             <AccessTime fontSize="small" />
                                             <Box>
                                                 <Typography>{row.date}</Typography>
-                                                <Typography>{row.time}</Typography>
+                                                <Typography>{to12HourFormat(row.time)}</Typography>
                                             </Box>
                                         </Stack>
                                     </TableCell>
@@ -233,7 +247,7 @@ function ContestTable({ columns, data, isMobile, currentUser }) {
                                     </TableCell>
                                     <TableCell>
                                         <ActionButton
-                                            action={status === 'completed' ? 'standings' : row.action}
+                                            action={action}
                                             isCreator={isCreator}
                                             status={status}
                                         />
@@ -253,57 +267,51 @@ function Contests() {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [currentUser] = useState('ap12345');
 
-    const contestData = {
-        current: [
-            {
-                name: 'Contest-14',
-                creator: 'ap12345',
-                date: '07/27/2025',
-                time: '20:05',
-                length: 120,
-                participants: 142,
-                action: 'enter'
-            },
-            {
-                name: 'Contest-14',
-                creator: 'sobhit-raghav',
-                date: '07/27/2025',
-                time: '20:05',
-                length: 120,
-                participants: 142,
-                action: 'enter'
-            },
-            {
-                name: 'Contest-20',
-                creator: 'sobhit_raghav',
-                date: '09/13/2025',
-                time: '20:05',
-                length: 180,
-                participants: 89,
-                action: 'register'
-            },
-            {
-                name: 'Contest-20',
-                creator: 'sobhit_raghav',
-                date: '09/13/2025',
-                time: '20:05',
-                length: 180,
-                participants: 89,
-                action: 'unregister'
-            }
-        ],
-        past: [
-            {
-                name: 'Contest-10',
-                creator: 'destroyer69',
-                date: '05/02/2024',
-                time: '20:05',
-                length: 150,
-                participants: 245,
-                action: 'standings'
-            }
-        ]
+    const [contests] = useState([
+        {
+            name: 'Contest-14',
+            creator: 'ap12345',
+            date: '27/05/2025',
+            time: '20:05',
+            length: 120,
+            participants: 142
+        },
+        {
+            name: 'Contest-11',
+            creator: 'sobhit-raghav',
+            date: '21/05/2025',
+            time: '19:05',
+            length: 120,
+            participants: 142
+        },
+        {
+            name: 'Contest-20',
+            creator: 'sobhit_raghav',
+            date: '13/02/2025',
+            time: '20:05',
+            length: 180,
+            participants: 89
+        },
+        {
+            name: 'Contest-10',
+            creator: 'destroyer69',
+            date: '05/02/2024',
+            time: '20:05',
+            length: 150,
+            participants: 245
+        }
+    ]);
+
+    const filterContests = (statusFilter) => {
+        return contests.filter(contest => {
+            const startTime = parseDateTime(contest.date, contest.time);
+            const status = getContestStatus(startTime, contest.length);
+            return statusFilter === 'active' ? status !== 'completed' : status === 'completed';
+        });
     };
+
+    const activeContests = filterContests('active');
+    const pastContests = filterContests('completed');
 
     return (
         <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3 }, px: { xs: 1, sm: 2 } }}>
@@ -333,7 +341,7 @@ function Contests() {
             <ScrollableSection title="Active Contests">
                 <ContestTable
                     columns={['Contest Name', 'Creator', 'Start Time', 'Length', 'Status', 'Participants', 'Action']}
-                    data={contestData.current}
+                    data={activeContests}
                     isMobile={isMobile}
                     currentUser={currentUser}
                 />
@@ -342,7 +350,7 @@ function Contests() {
             <ScrollableSection title="Past Contests">
                 <ContestTable
                     columns={['Contest Name', 'Creator', 'Start Time', 'Length', 'Status', 'Participants', 'Action']}
-                    data={contestData.past}
+                    data={pastContests}
                     isMobile={isMobile}
                     currentUser={currentUser}
                 />

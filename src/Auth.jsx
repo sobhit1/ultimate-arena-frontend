@@ -517,7 +517,7 @@ function Auth() {
               value={formData.user_name}
               onChange={(e) => {
                 const sanitizedValue = e.target.value
-                  .replace(/\W/g, '')
+                  .replace(/[^\w]/g, '')
                   .slice(0, 20);
                 setFormData({ ...formData, user_name: sanitizedValue });
               }}

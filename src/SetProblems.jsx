@@ -22,6 +22,7 @@ import {
     Typography,
     useTheme
 } from '@mui/material';
+import { styled } from '@mui/system';
 import { useState, useEffect } from 'react';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -30,39 +31,52 @@ import MuiLink from '@mui/material/Link';
 
 const to12HourFormat = (time24h) => {
     if (!time24h) return '';
-    
-    const [hours, minutes] = time24h.split(':');
+
+    const parts = time24h.split(':');
+    if (parts.length < 2) return time24h;
+
+    const hours = parts[0];
+    const minutes = parts[1];
+
     const hour = parseInt(hours, 10);
-    
-    if (isNaN(hour)) return '';
-    
+    if (isNaN(hour)) return time24h;
+
     const period = hour >= 12 ? 'PM' : 'AM';
     const hour12 = hour % 12 || 12;
-    
+
     return `${hour12}:${minutes} ${period}`;
 };
 
-const to24HourFormat = (time12h) => {
-    if (!time12h) return '';
-    
-    if (!time12h.includes('AM') && !time12h.includes('PM') && time12h.includes(':')) {
-        return time12h;
+const DetailItem = styled(Box)(({ theme }) => ({
+    display: 'flex',
+    flexDirection: 'column',
+    padding: theme.spacing(1.5),
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: theme.shadows[1],
+    borderLeft: `4px solid ${theme.palette.primary.main}`,
+    height: '100%',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+        boxShadow: theme.shadows[4],
+        transform: 'translateY(-2px)'
     }
-    
-    const [timePart, period] = time12h.split(' ');
-    const [hours, minutes] = timePart.split(':');
-    let hour = parseInt(hours, 10);
-    
-    if (isNaN(hour)) return '';
-    
-    if (period === 'PM' && hour !== 12) {
-        hour += 12;
-    } else if (period === 'AM' && hour === 12) {
-        hour = 0;
-    }
-    
-    return `${hour.toString().padStart(2, '0')}:${minutes}`;
-};
+}));
+
+const DetailTitle = styled(Typography)(({ theme }) => ({
+    fontWeight: 600,
+    color: theme.palette.text.secondary,
+    fontSize: '0.8rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    marginBottom: theme.spacing(0.5)
+}));
+
+const DetailValue = styled(Typography)(({ theme }) => ({
+    fontWeight: 700,
+    fontSize: '1.1rem',
+    color: theme.palette.text.primary
+}));
 
 function SetProblems() {
     const theme = useTheme();
@@ -72,8 +86,8 @@ function SetProblems() {
     const [points, setPoints] = useState('');
     const [problems, setProblems] = useState([]);
     const [startDate, setStartDate] = useState('');
-    const [startTime, setStartTime] = useState('12:00 PM');
-    const [contestLength, setContestLength] = useState({});
+    const [startTime, setStartTime] = useState('12:00');
+    const [contestLength, setContestLength] = useState({ hours: 2, minutes: 0 });
     const [savedContest, setSavedContest] = useState(null);
     const [isContestCreated, setIsContestCreated] = useState(false);
     const [snackbar, setSnackbar] = useState({
@@ -99,12 +113,12 @@ function SetProblems() {
                 const response = await fetch('/api/contest');
                 if (!response.ok) throw new Error('Failed to fetch contest data');
                 const data = await response.json();
-                
+
                 if (data) {
                     setSavedContest(data);
                     setIsContestCreated(true);
                     setStartDate(data.startDate);
-                    setStartTime(to12HourFormat(data.startTime));
+                    setStartTime(data.startTime || '12:00');
                     setContestLength({
                         hours: Math.floor(data.duration / 60),
                         minutes: data.duration % 60
@@ -180,7 +194,7 @@ function SetProblems() {
     };
 
     const handleSave = async () => {
-        if (!startDate || !startTime || !contestLength.hours && !contestLength.minutes) {
+        if (!startDate || !startTime || (!contestLength.hours && !contestLength.minutes)) {
             setSnackbar({
                 open: true,
                 message: 'Please fill all required fields',
@@ -203,11 +217,20 @@ function SetProblems() {
         }
 
         try {
-            const time24h = to24HourFormat(startTime);
-            
+            // Validate time format
+            const timeRegex = /^([01]?\d|2[0-3]):[0-5]\d$/;
+            if (!timeRegex.test(startTime)) {
+                setSnackbar({
+                    open: true,
+                    message: 'Invalid time format. Use HH:MM (24-hour format)',
+                    severity: 'error'
+                });
+                return;
+            }
+
             const contestData = {
                 startDate,
-                startTime: time24h,
+                startTime,
                 duration,
                 problems
             };
@@ -249,13 +272,7 @@ function SetProblems() {
     };
 
     const handleTimeChange = (e) => {
-        const timeValue = e.target.value;
-        
-        if (timeValue.includes(':') && !timeValue.includes('AM') && !timeValue.includes('PM')) {
-            setStartTime(to12HourFormat(timeValue));
-        } else {
-            setStartTime(timeValue);
-        }
+        setStartTime(e.target.value);
     };
 
     return (
@@ -292,33 +309,56 @@ function SetProblems() {
             </Snackbar>
 
             {/* Contest Details Display */}
-            <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: 4 }}>
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+            <Paper elevation={0} sx={{
+                p: 2,
+                mb: 4,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                backgroundColor: 'background.default'
+            }}>
+                <Typography variant="h6" gutterBottom sx={{
+                    fontWeight: 600,
+                    pb: 1,
+                    mb: 2,
+                    borderBottom: '2px solid',
+                    borderColor: 'divider'
+                }}>
                     Contest Details
                 </Typography>
+
                 <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                        <Typography>
-                            <strong>Date:</strong> {savedContest?.startDate || 'Not Set'}
-                        </Typography>
+                    <Grid item xs={12} md={4} width={{ xs: '100%', md: '30%' }}>
+                        <DetailItem>
+                            <DetailTitle>Start Date</DetailTitle>
+                            <DetailValue>
+                                {savedContest?.startDate || 'Not Set'}
+                            </DetailValue>
+                        </DetailItem>
                     </Grid>
-                    <Grid item xs={12} md={4}>
-                        <Typography>
-                            <strong>Time:</strong> {
-                                savedContest?.startTime ? 
-                                    to12HourFormat(savedContest.startTime) : 
+
+                    <Grid item xs={12} md={4} width={{ xs: '100%', md: '30%' }}>
+                        <DetailItem sx={{ borderLeftColor: 'white' }}>
+                            <DetailTitle>Start Time</DetailTitle>
+                            <DetailValue>
+                                {savedContest?.startTime ?
+                                    to12HourFormat(savedContest.startTime) :
                                     'Not Set'
-                            }
-                        </Typography>
+                                }
+                            </DetailValue>
+                        </DetailItem>
                     </Grid>
-                    <Grid item xs={12} md={4}>
-                        <Typography>
-                            <strong>Duration:</strong> 
-                            {savedContest?.duration ? 
-                                `${Math.floor(savedContest.duration / 60)}h ${savedContest.duration % 60}m` : 
-                                ' Not Set'
-                            }
-                        </Typography>
+
+                    <Grid item xs={12} md={4} width={{ xs: '100%', md: '30%' }}>
+                        <DetailItem sx={{ borderLeftColor: 'success.main' }}>
+                            <DetailTitle>DURATION</DetailTitle>
+                            <DetailValue>
+                                {savedContest?.duration ?
+                                    `${Math.floor(savedContest.duration / 60)}h ${savedContest.duration % 60}m` :
+                                    'Not Set'
+                                }
+                            </DetailValue>
+                        </DetailItem>
                     </Grid>
                 </Grid>
             </Paper>
@@ -332,7 +372,7 @@ function SetProblems() {
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
+                            slotProps={{ inputLabel: { shrink: true } }}
                             inputRef={(input) => (window.dateInputRef = input)}
                         />
                         <IconButton
@@ -350,11 +390,12 @@ function SetProblems() {
                             type="time"
                             value={startTime}
                             onChange={handleTimeChange}
-                            InputLabelProps={{ shrink: true }}
                             inputRef={(input) => (window.timeInputRef = input)}
-                            inputProps={{
-                                pattern: "[0-2][0-9]:[0-5][0-9]",
-                                placeholder: "HH:mm"
+                            slotProps={{
+                                inputLabel: { shrink: true },
+                                input: {
+                                    placeholder: "HH:mm"
+                                }
                             }}
                         />
                         <IconButton
@@ -422,7 +463,7 @@ function SetProblems() {
                         variant="contained"
                         size="small"
                         onClick={handleSave}
-                        sx={{ px: 5, py: 0.1, fontSize: '1.1rem', borderRadius: 2 }}
+                        sx={{ px: 5, py: 0.1, fontSize: '1.1rem', borderRadius: 2, height: 50 }}
                     >
                         Save Details
                     </Button>
@@ -506,7 +547,7 @@ function SetProblems() {
                         variant="contained"
                         size="small"
                         onClick={handleAddProblem}
-                        sx={{ px: 5, py: 0.1, fontSize: '1.1rem', borderRadius: 2 }}
+                        sx={{ px: 5, py: 0.1, fontSize: '1.1rem', borderRadius: 2, height: 50 }}
                     >
                         Add Problem
                     </Button>
@@ -571,7 +612,7 @@ function SetProblems() {
                                         </Stack>
                                     </TableCell>
                                     <TableCell>
-                                        <IconButton 
+                                        <IconButton
                                             onClick={() => setProblems(prev => prev.filter(p => p.id !== problem.id))}
                                         >
                                             <DeleteIcon color={"error"} />

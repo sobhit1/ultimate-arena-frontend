@@ -42,12 +42,10 @@ import {
 import { useTheme, alpha, styled } from '@mui/material/styles';
 import { BarChart } from '@mui/x-charts/BarChart';
 
-// Transition component for Dialog
 const Transition = forwardRef(function Transition(props, ref) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-// Styled components for better UI
 const GlassCard = styled(Paper)(({ theme, color }) => ({
     padding: theme.spacing(2),
     borderRadius: theme.shape.borderRadius * 3,
@@ -96,7 +94,7 @@ const ProfileAvatar = styled(Avatar)(({ theme }) => ({
     }
 }));
 
-const StatCard = ({ title, value, icon, progress, color }) => {
+const StatCard = ({ title, value, icon, color }) => {
     const theme = useTheme();
 
     return (
@@ -161,7 +159,6 @@ function Profile() {
         problemsSolved: 872
     };
 
-    // Animation effect for chart
     const [chartAnimated, setChartAnimated] = useState(false);
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -184,7 +181,6 @@ function Profile() {
     const handleAddCodeforcesProfile = async () => {
         const trimmedUsername = codeforcesUsername.trim();
 
-        // Regex to validate: only letters, digits, underscores, hyphens; length between 3 and 20
         const isValid = /^[a-zA-Z0-9_-]{3,20}$/.test(trimmedUsername);
 
         if (!isValid) {
@@ -247,7 +243,6 @@ function Profile() {
         setAnchorEl(null);
     };
 
-    // Update the handleSocialLinksSave function with validation checks
     const handleSocialLinksSave = async () => {
         const errors = [];
         let processedGithub = socialLinks.github.trim();

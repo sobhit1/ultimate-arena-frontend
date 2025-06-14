@@ -230,7 +230,7 @@ const InputField = styled('input')(({ theme }) => ({
   '&:focus::placeholder': {
     color: alpha(theme.palette.text.secondary, 0.4),
   },
-  paddingRight: '3rem', // Make room for the eye icon
+  paddingRight: '3rem',
 }));
 
 const InputIcon = styled('div')(({ theme }) => ({

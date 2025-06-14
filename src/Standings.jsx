@@ -65,7 +65,6 @@ function Standings() {
     const isLoading = false;
     const itemsPerPage = 10;
 
-    // Mock data - replace with actual data
     const standings = Array.from({ length: 15 }, (_, i) => ({
         id: i + 1,
         username: `user${i + 1}`,

@@ -237,7 +237,7 @@ function ContestTable({ columns, data, isMobile, currentUser }) {
                                         </Stack>
                                     </TableCell>
                                     <TableCell>
-                                        <Typography>{Math.floor(row.length / 60)}h {row.length % 60}m</Typography>
+                                        <Typography>{String(Math.floor(row.length / 60)).padStart(2, '0')}:{String(row.length % 60).padStart(2, '0')}</Typography>
                                     </TableCell>
                                     <TableCell>
                                         <StatusBadge label={status} status={status} />
@@ -271,15 +271,15 @@ function Contests() {
         {
             name: 'Contest-14',
             creator: 'ap12345',
-            date: '27/05/2025',
+            date: '27/05/2026',
             time: '20:05',
             length: 120,
-            participants: 142
+            participants: 158
         },
         {
             name: 'Contest-11',
             creator: 'sobhit-raghav',
-            date: '21/05/2025',
+            date: '21/06/2025',
             time: '19:05',
             length: 120,
             participants: 142

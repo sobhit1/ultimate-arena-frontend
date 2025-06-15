@@ -10,7 +10,8 @@ import {
   Snackbar,
   useTheme,
   alpha,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import {
   ArrowRightAlt,
@@ -256,6 +257,7 @@ function Auth() {
   const theme = useTheme();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -316,20 +318,99 @@ function Auth() {
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      console.log(isLogin ? 'Logging in:' : 'Registering:', formData);
+
+    if (!validateForm() || isLoading) return;
+
+    setIsLoading(true);
+
+    setSnackbar({
+      open: true,
+      message: "Processing your request...",
+      severity: "info",
+    });
+
+    try {
+      const endpoint = isLogin
+        ? "https://ultimate-arena.onrender.com/api/auth/login"
+        : "https://ultimate-arena.onrender.com/api/auth/register";
+
+      const body = isLogin
+        ? {
+          user_name: formData.user_name,
+          password: formData.password,
+        }
+        : {
+          name: formData.name,
+          user_name: formData.user_name,
+          password: formData.password,
+        };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Invalid response from server.");
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data.message ||
+          (isLogin
+            ? "Login failed. Please check your credentials."
+            : "Registration failed. Please try again.")
+        );
+      }
+
+      const userData = data.data?.user ?? data.data?.newUser;
+
+      if (userData) {
+        const userJson = JSON.stringify(userData);
+
+        if (rememberMe) {
+          localStorage.setItem("user", userJson);
+          localStorage.setItem("rememberMe", "true");
+          sessionStorage.removeItem("user");
+        } else {
+          sessionStorage.setItem("user", userJson);
+          localStorage.removeItem("user");
+          localStorage.removeItem("rememberMe");
+        }
+      } else {
+        throw new Error("User data not found in response.");
+      }
 
       setSnackbar({
         open: true,
-        message: isLogin ? 'Successfully logged in!' : 'Account created successfully!',
-        severity: 'success'
+        message: isLogin
+          ? "Successfully logged in!"
+          : "Account created successfully!",
+        severity: "success",
       });
 
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
+      setTimeout(() => navigate("/profile"), 1500);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message:
+          error.message ||
+          (isLogin
+            ? "Login failed. Please check your credentials."
+            : "Registration failed. Please try again."),
+        severity: "error",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -493,6 +574,7 @@ function Auth() {
                     setFormData({ ...formData, name: e.target.value.trim() });
                   }}
                   aria-label="Full Name"
+                  disabled={isLoading}
                 />
               </InputWrapper>
             )}
@@ -522,6 +604,7 @@ function Auth() {
                 setFormData({ ...formData, user_name: sanitizedValue });
               }}
               aria-label="Username"
+              disabled={isLoading}
             />
           </InputWrapper>
 
@@ -546,11 +629,13 @@ function Auth() {
                 setFormData({ ...formData, password: sanitizedValue });
               }}
               aria-label="Password"
+              disabled={isLoading}
             />
             <PasswordToggle
               onClick={handleTogglePassword}
               aria-label="toggle password visibility"
               edge="end"
+              disabled={isLoading}
             >
               {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
             </PasswordToggle>
@@ -581,11 +666,13 @@ function Auth() {
                     setFormData({ ...formData, confirmPassword: sanitizedValue });
                   }}
                   aria-label="Confirm Password"
+                  disabled={isLoading}
                 />
                 <PasswordToggle
                   onClick={handleToggleConfirmPassword}
                   aria-label="toggle confirm password visibility"
                   edge="end"
+                  disabled={isLoading}
                 >
                   {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                 </PasswordToggle>
@@ -613,6 +700,7 @@ function Auth() {
                       color: theme.palette.primary.main,
                     }
                   }}
+                  disabled={isLoading}
                 />
               }
               label="Remember me"
@@ -632,9 +720,6 @@ function Auth() {
                 fontWeight: 500,
                 textDecoration: 'none',
                 position: 'relative',
-                '&:hover': {
-                  color: theme.palette.primary.dark
-                },
                 '&:after': {
                   content: '""',
                   position: 'absolute',
@@ -647,7 +732,9 @@ function Auth() {
                 },
                 '&:hover:after': {
                   width: '100%'
-                }
+                },
+                pointerEvents: isLoading ? 'none' : 'auto',
+                opacity: isLoading ? 0.7 : 1
               }}
             >
               Forgot Password?
@@ -655,8 +742,8 @@ function Auth() {
           </Box>
 
           <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={isLoading ? {} : { scale: 1.02 }}
+            whileTap={isLoading ? {} : { scale: 0.98 }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
@@ -664,15 +751,19 @@ function Auth() {
             <Button
               fullWidth
               type="submit"
+              disabled={isLoading}
               sx={{
                 py: '0.6rem',
                 borderRadius: '12px',
                 fontWeight: 800,
                 fontSize: '1.05rem',
-                background: `linear-gradient(45deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                background: isLoading
+                  ? alpha(theme.palette.primary.main, 0.7)
+                  : `linear-gradient(45deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
                 color: theme.palette.getContrastText(theme.palette.primary.main),
                 position: 'relative',
                 overflow: 'hidden',
+                transition: 'all 0.3s ease',
                 '&:after': {
                   content: '""',
                   position: 'absolute',
@@ -685,15 +776,39 @@ function Auth() {
                     ${alpha(theme.palette.common.white, 0.1)} 50%, 
                     transparent 75%)`,
                   transform: 'rotate(45deg)',
-                  transition: 'all 0.5s ease'
+                  transition: 'all 0.5s ease',
+                  opacity: isLoading ? 0 : 1
                 },
                 '&:hover:after': {
-                  left: '150%'
+                  left: isLoading ? '-50%' : '150%'
                 }
               }}
             >
-              {isLogin ? 'Enter Arena' : 'Begin Journey'}
-              <ArrowRightAlt sx={{ ml: 1 }} />
+              {isLoading ? (
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%'
+                }}>
+                  <CircularProgress
+                    size={24}
+                    sx={{
+                      color: 'white',
+                      mr: 2,
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                  <Typography>
+                    {isLogin ? 'Logging in...' : 'Creating account...'}
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {isLogin ? 'Enter Arena' : 'Begin Journey'}
+                  <ArrowRightAlt sx={{ ml: 1 }} />
+                </Box>
+              )}
             </Button>
           </motion.div>
         </form>
